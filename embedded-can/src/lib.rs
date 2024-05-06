@@ -10,7 +10,7 @@ mod id;
 
 pub use id::*;
 
-/// A CAN2.0 Frame
+/// A CAN2.0 data/remote Frame
 pub trait Frame: Sized {
     /// Creates a new frame.
     ///
@@ -49,6 +49,49 @@ pub trait Frame: Sized {
 
     /// Returns the frame data (0..8 bytes in length).
     fn data(&self) -> &[u8];
+}
+
+/// A CAN FD (flexible data rate) Frame
+pub trait FdFrame: Sized {
+    /// Creates a new FD frame. `brs` and `esi` flags default to false.
+    ///
+    /// This will return `None` if the data slice is too long.
+    fn new(id: impl Into<Id>, data: &[u8]) -> Option<Self>;
+
+    /// Create a new FD frame with FD flags
+    fn with_flags(id: impl Into<Id>, data: &[u8], brs: bool, esi: bool) -> Option<Self>;
+
+    /// Returns true if this frame is an extended frame.
+    fn is_extended(&self) -> bool;
+
+    /// Returns true if this frame is a standard frame.
+    fn is_standard(&self) -> bool {
+        !self.is_extended()
+    }
+
+    /// Returns the frame identifier.
+    fn id(&self) -> Id;
+
+    /// Returns the data length code (DLC) which is in the range 0..64.
+    ///
+    /// For data frames the DLC value always matches the length of the data.
+    /// Remote frames do not carry any data, yet the DLC can be greater than 0.
+    fn dlc(&self) -> usize;
+
+    /// Returns the frame data (0..64 bytes in length).
+    fn data(&self) -> &[u8];
+
+    /// Whether the frame uses a bit rate switch (second bit rate for payload data).
+    fn is_brs(&self) -> bool;
+
+    /// Sets whether the frame uses a bit rate switch.
+    fn set_brs(&mut self, on: bool);
+
+    /// Gets the error state indicator of the transmitting node
+    fn is_esi(&self) -> bool;
+
+    /// Sets the error state indicator of the transmitting node
+    fn set_esi(&mut self, on: bool);
 }
 
 /// CAN error
